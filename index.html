@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FutureDesk OS — WebOS | CloudOS | NexusOS</title>
+ <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" 
+    crossorigin="anonymous">
+<style>
+  :root {
+    --primary: #0057b3;
+    --secondary: #002066;
+    --text-dark: #222;
+    --text-light: #eee;
+    --bg-dark: #121212;
+    --bg-light: #fafafa;
+    --gray: #555;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: "Poppins", Arial, sans-serif;
+    color: var(--text-dark);
+    background-color: var(--bg-light);
+    line-height: 1.6;
+  }
+
+  /* Hero Section */
+  header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 100px 20px;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+  }
+
+  header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+  }
+
+  .hero-buttons {
+    margin-top: 30px;
+  }
+
+  .hero-buttons button {
+    background: white;
+    color: var(--primary);
+    border: none;
+    border-radius: 30px;
+    padding: 12px 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 0 10px;
+    transition: all 0.3s;
+  }
+
+  .hero-buttons button:hover {
+    background: #f1f1f1;
+    transform: translateY(-3px);
+  }
+
+  .devices {
+    margin-top: 50px;
+    max-width: 800px;
+    margin-inline: auto;
+  }
+
+  .devices img {
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  /* Features Section */
+  section.features {
+    padding: 80px 20px;
+    background: white;
+    text-align: center;
+  }
+
+  section.features h2 {
+    font-size: 2.2rem;
+    color: var(--primary);
+    margin-bottom: 20px;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 40px;
+  }
+
+  .feature {
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 30px;
+    transition: all 0.3s;
+  }
+
+  .feature:hover {
+    background: #e8f9f3;
+    transform: translateY(-5px);
+  }
+
+  .feature h3 {
+    color: var(--secondary);
+    margin-bottom: 10px;
+  }
+
+  /* Why Choose Section */
+  section.why {
+    background: #1e1e1e;
+    color: white;
+    padding: 80px 20px;
+    text-align: center;
+  }
+
+  .why h2 {
+    color: var(--primary);
+    margin-bottom: 20px;
+    font-size: 2.2rem;
+  }
+
+  .why-grid {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+  }
+
+  .why-item {
+    background: rgba(255,255,255,0.05);
+    padding: 25px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .why-item h3 {
+    color: var(--primary);
+    margin-bottom: 10px;
+  }
+
+  /* FAQ Section */
+  section.faq {
+    padding: 80px 20px;
+    background: white;
+    text-align: center;
+  }
+
+  .faq h2 {
+    color: var(--primary);
+    margin-bottom: 30px;
+    font-size: 2rem;
+  }
+
+  .faq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+
+  .faq-item {
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 25px;
+    text-align: left;
+  }
+
+  .faq-item h4 {
+    color: var(--secondary);
+    margin-bottom: 10px;
+  }
+
+  /* Partners Section */
+  section.partners {
+    padding: 60px 20px;
+    background: #e8f9f3;
+    text-align: center;
+  }
+
+  .partners h2 {
+    color: var(--primary);
+    margin-bottom: 20px;
+  }
+
+  .partner-logos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 40px;
+    margin-top: 30px;
+  }
+
+  .partner-logos div {
+    font-weight: 600;
+    color: var(--gray);
+    opacity: 0.7;
+  }
+
+  /* Footer */
+  footer {
+    background: #121212;
+    color: #ccc;
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  footer a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 600px) {
+    header h1 {
+      font-size: 2rem;
+    }
+    header p {
+      font-size: 1rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>FutureDesk OS Suite</h1>
+  <p>The next-generation family of operating systems — WebOS, CloudOS, and NexusOS</p>
+  <div class="hero-buttons">
+    <button onclick="location.href='WebOS.html'">Try WebOS</button>
+    <button onclick="location.href='CloudOS.html'">Try CloudOS</button>
+    <button onclick="location.href='NexusOS.html'">Try NexusOS</button>
+  </div>
+  <div class="devices">
+    <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="carousel">
+  <div class="carousel-indicators">
+    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
+    <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
+  </div>
+  <div class="carousel-inner">
+    <div class="carousel-item active">
+      <img class="d-block w-100" src="./asset/WebOS.jpeg" alt="First slide">
+    </div>
+    <div class="carousel-item">
+      <img class="d-block w-100" src="./asset/CloudOS.jpeg" alt="Second slide">
+    </div>
+    <div class="carousel-item">
+      <img class="d-block w-100" src="./asset/NexusOs.jpeg" alt="Third slide">
+    </div>
+  </div>
+  <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Previous</span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Next</span>
+  </button>
+</div>
+  </div>
+</header>
+
+<section class="features">
+  <h2>What is FutureDesk OS?</h2>
+  <p>FutureDesk OS brings simplicity, power, and design excellence to your workspace. Choose your ideal OS for creativity, performance, or development.</p>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <h3>🌐 WebOS</h3>
+      <p>Minimal, fast, and elegant. Perfect for light productivity, browsing, and daily use with stunning UI aesthetics.</p>
+    </div>
+    <div class="feature">
+      <h3>☁️ CloudOS</h3>
+      <p>Smart cloud-powered computing — balanced, connected, and scalable for professionals and creators alike.</p>
+    </div>
+    <div class="feature">
+      <h3>💻 NexusOS</h3>
+      <p>Built for developers. A powerhouse environment for coding, scripting, and debugging with advanced tools.</p>
+    </div>
+  </div>
+</section>
+
+<!-- <section class="why">
+  <h2>Why Choose FutureDesk?</h2>
+  <p>We’ve designed an ecosystem that adapts to everyone — from casual users to hardcore developers.</p>
+
+  <div class="why-grid">
+    <div class="why-item">
+      <h3>🚀 Fast and Lightweight</h3>
+      <p>Boots in seconds, optimized memory handling, and quick multitasking performance.</p>
+    </div>
+    <div class="why-item">
+      <h3>🔒 Secure & Reliable</h3>
+      <p>Sandboxed apps, encrypted storage, and privacy-first design ensure your data stays safe.</p>
+    </div>
+    <div class="why-item">
+      <h3>🧠 AI-Integrated</h3>
+      <p>Smart recommendations, predictive file search, and adaptive workspace learning.</p>
+    </div>
+    <div class="why-item">
+      <h3>🌍 Cloud Connected</h3>
+      <p>Sync seamlessly between WebOS, CloudOS, and NexusOS — one account, one experience.</p>
+    </div>
+  </div>
+</section> -->
+
+<section class="faq">
+  <h2>Have any questions?</h2>
+  <div class="faq-grid">
+    <div class="faq-item">
+      <h4>Is it free?</h4>
+      <p>Yes! FutureDesk OS is completely free to use and open source under the FutureCore license.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Will it run on my system?</h4>
+      <p>All versions are browser-compatible and optimized for Chrome-based environments.</p>
+    </div>
+    <!-- <div class="faq-item">
+      <h4>Can I keep my files?</h4>
+      <p>Absolutely. Your data is stored securely in local storage or your linked cloud account.</p>
+    </div> -->
+    <div class="faq-item">
+      <h4>Which one should I choose?</h4>
+      <p>WebOS for simplicity, CloudOS for productivity, NexusOS for development — all share a unified design.</p>
+    </div>
+  </div>
+</section>
+
+<!-- <section class="partners">
+  <h2>Our Partners & Sponsors</h2>
+  <div class="partner-logos">
+    <div>NextCloud</div>
+    <div>GitHub</div>
+    <div>Vercel</div>
+    <div>DigitalOcean</div>
+    <div>Netlify</div>
+    <div>Glitch</div>
+  </div>
+</section> -->
+
+<footer>
+  <p>© 2025 FutureDesk Technologies. All rights reserved.</p>
+  <p><a href="#">Privacy Policy</a> • <a href="#">Terms of Use</a> • <a href="#">Support</a></p>
+</footer>
+
+ <script 
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" 
+    crossorigin="anonymous">
+  </script>
+</body>
+</html>

@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebOS — single file</title>
+    <!-- External libs (CDN). The file is single-file HTML but requires internet for these libs. -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/theme/dracula.min.css"
+    />
+    <style>
+      /* --- Basic theme --- */
+      :root {
+        --bg: #0f1724;
+        --panel: #0b1220;
+        --accent: #4f46e5;
+        --muted: #94a3b8;
+        --glass: rgba(255, 255, 255, 0.04);
+        --taskbar: #071029;
+        --task-active: #15213a;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
+        color: #e6eef8;
+        background: linear-gradient(180deg, #071025 0%, #071426 60%);
+        overflow: hidden;
+      }
+      /* desktop */
+      #desktop {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(
+            circle at 10% 10%,
+            rgba(79, 70, 229, 0.06),
+            transparent 15%
+          ),
+          radial-gradient(
+            circle at 90% 90%,
+            rgba(59, 130, 246, 0.05),
+            transparent 8%
+          );
+      }
+      .icon {
+        width: 90px;
+        text-align: center;
+        color: var(--muted);
+        position: absolute;
+        user-select: none;
+      }
+      .icon img {
+        width: 64px;
+        height: 64px;
+        border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
+      }
+      .icon span {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
+      }
+      /* windows */
+      .window {
+        position: absolute;
+        min-width: 260px;
+        min-height: 120px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          transparent
+        );
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        box-shadow: 0 12px 30px rgba(2, 6, 23, 0.6);
+        overflow: hidden;
+        backdrop-filter: blur(6px);
+      }
+      .titlebar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.015),
+          transparent
+        );
+        cursor: grab;
+      }
+      .titlebar .title {
+        flex: 1;
+        font-weight: 600;
+      }
+      .controls {
+        display: flex;
+        gap: 6px;
+      }
+      .btn {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+      .btn.close {
+        background: #ff6b6b;
+      }
+      .btn.min {
+        background: #ffd166;
+      }
+      .btn.max {
+        background: #6bffb3;
+      }
+      .content {
+        padding: 10px;
+        background: linear-gradient(180deg, rgba(3, 7, 18, 0.6), transparent);
+        height: calc(100% - 44px);
+        overflow: auto;
+      }
+      .taskbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 44px;
+        background: var(--taskbar);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.03);
+      }
+      .start {
+        width: 44px;
+        height: 32px;
+        border-radius: 8px;
+        background: linear-gradient(180deg, var(--accent), #2b2bdc);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .task-list {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex: 1;
+      }
+      .task-item {
+        height: 32px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+      .task-item.active {
+        background: var(--task-active);
+        color: white;
+      }
+      /* start menu */
+      .start-menu {
+        position: absolute;
+        left: 10px;
+        bottom: 54px;
+        width: 360px;
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        box-shadow: 0 12px 40px rgba(2, 6, 23, 0.7);
+        display: none;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+      .tile {
+        padding: 8px;
+        border-radius: 8px;
+        background: var(--glass);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+      .tile img {
+        width: 36px;
+        height: 36px;
+      }
+      /* file manager */
+      .file {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px;
+        border-radius: 6px;
+      }
+      .file:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      /* paint */
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+      }
+      /* game */
+      .center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+      /* notifications */
+      .notif {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        background: linear-gradient(180deg, #142032, #0b1b27);
+        padding: 10px;
+        border-radius: 10px;
+        color: var(--muted);
+        box-shadow: 0 8px 24px rgba(2, 6, 23, 0.6);
+      }
+      /* responsive small tweaks */
+      @media (max-width: 700px) {
+        .start-menu {
+          width: 90vw;
+        }
+      }
+      /* code mirror sizing */
+      .editor {
+        height: 100%;
+        min-height: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="desktop">
+      <!-- desktop icons -->
+      <div id="icons"></div>
+
+      <!-- Windows container -->
+      <div id="windows"></div>
+
+      <!-- Start menu -->
+      <div id="startMenu" class="start-menu" aria-hidden="true">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          "
+        >
+          <div style="font-weight: 700; color: white">WebOS</div>
+          <div style="color: var(--muted); font-size: 12px">
+            Portable single-file demo
+          </div>
+        </div>
+        <div class="grid" id="startTiles"></div>
+      </div>
+
+      <!-- Taskbar -->
+      <div class="taskbar">
+        <div class="start" id="startBtn">☰</div>
+        <div class="task-list" id="taskList"></div>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <div style="color: var(--muted); font-size: 13px" id="clock"></div>
+        </div>
+      </div>
+
+      <div class="notif" id="notif" style="display: none"></div>
+    </div>
+
+    <!-- External scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/python/python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+
+    <script>
+      // --- Utility: manage windows, z-index, create apps ---
+      const windowsEl = document.getElementById("windows");
+      const taskList = document.getElementById("taskList");
+      const iconsEl = document.getElementById("icons");
+      const startBtn = document.getElementById("startBtn");
+      const startMenu = document.getElementById("startMenu");
+      const startTiles = document.getElementById("startTiles");
+      const notifEl = document.getElementById("notif");
+
+      let z = 10;
+      let winId = 0;
+      const apps = {};
+
+      function showNotif(txt, timeout = 3000) {
+        notifEl.textContent = txt;
+        notifEl.style.display = "block";
+        setTimeout(() => (notifEl.style.display = "none"), timeout);
+      }
+
+      function clockTick() {
+        const c = document.getElementById("clock");
+        const d = new Date();
+        c.textContent = d.toLocaleString();
+      }
+      setInterval(clockTick, 1000);
+      clockTick();
+
+      // Desktop icons layout
+      const desktopIcons = [
+        { id: "editor", name: "Text Editor", icon: "📝" },
+        { id: "code", name: "Code Editor", icon: "💻" },
+        { id: "terminal", name: "Terminal", icon: "🖥️" },
+        { id: "paint", name: "Paint", icon: "🎨" },
+        { id: "fileman", name: "File Manager", icon: "📂" },
+        { id: "video", name: "Video Editor", icon: "🎬" },
+        { id: "game", name: "Arcade", icon: "🕹️" },
+        { id: "about", name: "About", icon: "❓" },
+      ];
+
+      function layoutIcons() {
+        iconsEl.innerHTML = "";
+        desktopIcons.forEach((it, i) => {
+          const el = document.createElement("div");
+          el.className = "icon";
+          el.style.left = 20 + (i % 4) * 110 + "px";
+          el.style.top = 20 + Math.floor(i / 4) * 110 + "px";
+          el.innerHTML = `<div style="width:90px"><div style='font-size:40px'>${it.icon}</div><span>${it.name}</span></div>`;
+          el.onclick = () => openApp(it.id);
+          iconsEl.appendChild(el);
+          // also add start tile
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.innerHTML = `<img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect rx="8" width="48" height="48" fill="%23504ae6"/></svg>'/><div style='font-size:13px;color:var(--muted)'>${it.name}</div>`;
+          tile.onclick = () => {
+            openApp(it.id);
+            toggleStart(false);
+          };
+          startTiles.appendChild(tile);
+        });
+      }
+      layoutIcons();
+
+      // Start toggle
+      startBtn.onclick = () => toggleStart();
+      function toggleStart(show) {
+        if (show === undefined) show = startMenu.style.display != "block";
+        startMenu.style.display = show ? "block" : "none";
+      }
+      document.addEventListener("click", (e) => {
+        if (!startMenu.contains(e.target) && e.target !== startBtn)
+          startMenu.style.display = "none";
+      });
+
+      // Window creation helper
+      function createWindow(
+        title,
+        opts = { w: 640, h: 360, x: 80, y: 80, appId: null }
+      ) {
+        const id = "win_" + ++winId;
+        const win = document.createElement("div");
+        win.className = "window";
+        win.id = id;
+        win.style.width = opts.w + "px";
+        win.style.height = opts.h + "px";
+        win.style.left = opts.x + "px";
+        win.style.top = opts.y + "px";
+        win.style.zIndex = ++z;
+        win.innerHTML = `<div class='titlebar'><div class='title'>${title}</div><div class='controls'><div class='btn close' title='close'></div><div class='btn min' title='minimize'></div><div class='btn max' title='maximize'></div></div></div><div class='content' id='${id}_content'></div>`;
+        windowsEl.appendChild(win);
+        // drag
+        const tb = win.querySelector(".titlebar");
+        tb.addEventListener("pointerdown", startDrag);
+        function startDrag(e) {
+          win.style.zIndex = ++z;
+          win.dataset.dragging = "1";
+          const ox = e.clientX,
+            oy = e.clientY,
+            sx = parseInt(win.style.left),
+            sy = parseInt(win.style.top);
+          function move(ev) {
+            if (!win.dataset.dragging) return;
+            win.style.left = sx + (ev.clientX - ox) + "px";
+            win.style.top = sy + (ev.clientY - oy) + "px";
+          }
+          function up() {
+            win.dataset.dragging = "0";
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", up);
+          }
+          window.addEventListener("pointermove", move);
+          window.addEventListener("pointerup", up);
+        }
+        // controls
+        win.querySelector(".btn.close").onclick = () => {
+          win.remove();
+          removeTask(id);
+        };
+        win.querySelector(".btn.min").onclick = () => {
+          win.style.display = "none";
+          taskToggle(id);
+        };
+        win.querySelector(".btn.max").onclick = () => {
+          if (win.dataset.max === "1") {
+            win.style.width = win.dataset.prevW;
+            win.style.height = win.dataset.prevH;
+            win.style.left = win.dataset.prevL;
+            win.style.top = win.dataset.prevT;
+            win.dataset.max = "0";
+          } else {
+            win.dataset.prevW = win.style.width;
+            win.dataset.prevH = win.style.height;
+            win.dataset.prevL = win.style.left;
+            win.dataset.prevT = win.style.top;
+            win.style.left = "8px";
+            win.style.top = "8px";
+            win.style.width = window.innerWidth - 16 + "px";
+            win.style.height = window.innerHeight - 72 + "px";
+            win.dataset.max = "1";
+          }
+        };
+        // add task
+        addTask(id, title, opts.appId || title);
+        return {
+          id,
+          content: document.getElementById(id + "_content"),
+          el: win,
+        };
+      }
+
+      function addTask(winId, title, icon) {
+        const t = document.createElement("div");
+        t.className = "task-item active";
+        t.id = "task_" + winId;
+        t.textContent = title;
+        t.onclick = () => {
+          const w = document.getElementById(winId);
+          if (w.style.display === "none") w.style.display = "block";
+          w.style.zIndex = ++z;
+          highlightTask(winId);
+        };
+        // remove active from others
+        Array.from(taskList.children).forEach((n) =>
+          n.classList.remove("active")
+        );
+        taskList.appendChild(t);
+      }
+      function highlightTask(winId) {
+        Array.from(taskList.children).forEach((n) =>
+          n.classList.remove("active")
+        );
+        const t = document.getElementById("task_" + winId);
+        if (t) t.classList.add("active");
+      }
+      function removeTask(winId) {
+        const t = document.getElementById("task_" + winId);
+        if (t) t.remove();
+      }
+      function taskToggle(winId) {
+        const w = document.getElementById(winId);
+        if (!w) return;
+        if (w.style.display === "none") {
+          w.style.display = "block";
+          w.style.zIndex = ++z;
+          highlightTask(winId);
+        } else {
+          w.style.display = "none";
+        }
+      }
+
+      // --- Apps implementations ---
+      // Text Editor (simple file aware)
+      function app_textEditor() {
+        const win = createWindow("Text Editor", {
+          w: 600,
+          h: 420,
+          x: 120,
+          y: 80,
+          appId: "editor",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;flex-direction:column;height:100%'><div style='display:flex;gap:8px;margin-bottom:8px'><button id='newFile'>New</button><button id='saveFile'>Save</button><select id='openList'></select><button id='deleteFile'>Delete</button></div><textarea id='txt' style='flex:1;width:100%;padding:10px;border-radius:6px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:white'></textarea></div>`;
+        const ta = content.querySelector("#txt");
+        const openList = content.querySelector("#openList");
+        const key = "webos_files";
+        function readFiles() {
+          try {
+            return JSON.parse(localStorage.getItem(key) || "{}");
+          } catch (e) {
+            return {};
+          }
+        }
+        function writeFiles(f) {
+          localStorage.setItem(key, JSON.stringify(f));
+        }
+        function refresh() {
+          const f = readFiles();
+          openList.innerHTML = "";
+          Object.keys(f).forEach((n) => {
+            const op = document.createElement("option");
+            op.value = n;
+            op.textContent = n;
+            openList.appendChild(op);
+          });
+        }
+        refresh();
+        content.querySelector("#newFile").onclick = () => {
+          const name = prompt("Name file");
+          if (!name) return;
+          const f = readFiles();
+          f[name] = "";
+          writeFiles(f);
+          refresh();
+          showNotif("File " + name + " created");
+        };
+        content.querySelector("#saveFile").onclick = () => {
+          const name = openList.value || prompt("Save as");
+          if (!name) return;
+          const f = readFiles();
+          f[name] = ta.value;
+          writeFiles(f);
+          refresh();
+          showNotif("Saved " + name);
+        };
+        content.querySelector("#openList").onchange = () => {
+          const f = readFiles();
+          ta.value = f[openList.value] || "";
+        };
+        content.querySelector("#deleteFile").onclick = () => {
+          const name = openList.value;
+          if (!name) return;
+          const f = readFiles();
+          delete f[name];
+          writeFiles(f);
+          refresh();
+          showNotif("Deleted " + name);
+        };
+      }
+
+      // Code Editor (CodeMirror + run JS/Python via Skulpt)
+      function app_codeEditor() {
+        const win = createWindow("Code Editor", {
+          w: 900,
+          h: 540,
+          x: 160,
+          y: 120,
+          appId: "code",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;flex-direction:column;height:100%'><div style='display:flex;gap:8px;margin-bottom:8px;align-items:center'><select id='mode'><option value='javascript'>JavaScript</option><option value='python'>Python</option></select><button id='run'>Run</button><button id='save'>Save Snippet</button><select id='snips'></select></div><div class='editor' id='editor'></div><div id='output' style='height:120px;padding:8px;border-radius:6px;background:rgba(0,0,0,0.25);margin-top:8px;overflow:auto;color:#d1e8ff'></div></div>`;
+        const cm = CodeMirror(content.querySelector("#editor"), {
+          value: `# try python or switch to JS\nprint('hello world')\n`,
+          mode: "python",
+          theme: "dracula",
+          lineNumbers: true,
+        });
+        const modeSel = content.querySelector("#mode");
+        modeSel.onchange = () => {
+          const m = modeSel.value;
+          cm.setOption("mode", m);
+        };
+        const out = content.querySelector("#output");
+        function skulptRun(code) {
+          out.textContent = "Running Python...\n";
+          function outf(text) {
+            out.textContent += text;
+          }
+          Sk.configure({
+            output: outf,
+            read: function (x) {
+              if (
+                Sk.builtinFiles === undefined ||
+                Sk.builtinFiles["files"][x] === undefined
+              )
+                throw "File not found: " + x;
+              return Sk.builtinFiles["files"][x];
+            },
+          });
+          Sk.misceval
+            .asyncToPromise(() =>
+              Sk.importMainWithBody("<stdin>", false, code, true)
+            )
+            .then(() => {})
+            .catch((err) => (out.textContent += "\nError: " + err.toString()));
+        }
+        content.querySelector("#run").onclick = () => {
+          const code = cm.getValue();
+          if (modeSel.value === "javascript") {
+            try {
+              const r = eval(cm.getValue());
+              out.textContent = String(
+                r === undefined ? "JS executed (open console for logs)" : r
+              );
+            } catch (e) {
+              out.textContent = "Error: " + e.message;
+            }
+          } else skulptRun(code);
+        };
+        // save snippets
+        const snipKey = "webos_snips";
+        function readS() {
+          try {
+            return JSON.parse(localStorage.getItem(snipKey) || "{}");
+          } catch (e) {
+            return {};
+          }
+        }
+        function writeS(v) {
+          localStorage.setItem(snipKey, JSON.stringify(v));
+        }
+        function refreshS() {
+          const s = readS();
+          const sel = content.querySelector("#snips");
+          sel.innerHTML = "";
+          Object.keys(s).forEach((n) => {
+            const op = document.createElement("option");
+            op.value = n;
+            op.textContent = n;
+            sel.appendChild(op);
+          });
+        }
+        refreshS();
+        content.querySelector("#save").onclick = () => {
+          const n = prompt("Snippet name");
+          if (!n) return;
+          const s = readS();
+          s[n] = cm.getValue();
+          writeS(s);
+          refreshS();
+          showNotif("Snippet saved");
+        };
+        content.querySelector("#snips").onchange = () => {
+          const s = readS();
+          cm.setValue(s[content.querySelector("#snips").value] || "");
+        };
+      }
+
+      // Terminal (fake shell + Python via Skulpt)
+      function app_terminal() {
+        const win = createWindow("Terminal", {
+          w: 640,
+          h: 420,
+          x: 220,
+          y: 160,
+          appId: "terminal",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;flex-direction:column;height:100%'><div id='term' style='flex:1;overflow:auto;padding:10px;background:#01040a;border-radius:6px;color:#9be6a0;font-family:monospace;font-size:13px'></div><div style='display:flex;gap:8px;margin-top:8px'><input id='cmd' style='flex:1;background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px;color:white' placeholder='Type JS or python: print(1) or js: 2+2' /><button id='send'>Run</button></div></div>`;
+        const term = content.querySelector("#term");
+        const cmd = content.querySelector("#cmd");
+        content.querySelector("#send").onclick = run;
+        cmd.onkeydown = (e) => {
+          if (e.key === "Enter") run();
+        };
+        function run() {
+          const v = cmd.value.trim();
+          if (!v) return;
+          if (v.startsWith("js:")) {
+            try {
+              const res = eval(v.slice(3));
+              term.innerHTML += `<div>> <span style='color:#cbd5e1'>${escapeHtml(
+                v
+              )}</span><div style='color:#fff'>${escapeHtml(
+                String(res)
+              )}</div></div>`;
+            } catch (e) {
+              term.innerHTML += `<div style='color:#ff8b8b'>Error: ${escapeHtml(
+                e.message
+              )}</div>`;
+            }
+          } else {
+            // python via skulpt
+            term.innerHTML += `<div>> <span style='color:#cbd5e1'>${escapeHtml(
+              v
+            )}</span></div>`;
+            function outf(t) {
+              term.innerHTML += `<div>${escapeHtml(t)}</div>`;
+              term.scrollTop = term.scrollHeight;
+            }
+            Sk.configure({
+              output: outf,
+              read: function (x) {
+                if (
+                  Sk.builtinFiles === undefined ||
+                  Sk.builtinFiles["files"][x] === undefined
+                )
+                  throw "File not found: " + x;
+                return Sk.builtinFiles["files"][x];
+              },
+            });
+            Sk.misceval
+              .asyncToPromise(() =>
+                Sk.importMainWithBody("<stdin>", false, v, true)
+              )
+              .catch((err) => {
+                term.innerHTML += `<div style='color:#ff8b8b'>${escapeHtml(
+                  err.toString()
+                )}</div>`;
+              });
+          }
+          cmd.value = "";
+          term.scrollTop = term.scrollHeight;
+        }
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      // Paint app
+      function app_paint() {
+        const win = createWindow("Paint", {
+          w: 800,
+          h: 520,
+          x: 260,
+          y: 120,
+          appId: "paint",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;flex-direction:column;height:100%'><div class='toolbar'><input type='color' id='col' value='#ffffff' class='color-swatch' /><input type='range' id='size' min='1' max='60' value='6' /><button id='clear'>Clear</button><button id='save'>Save PNG</button></div><canvas id='paintCanvas' style='flex:1;border-radius:6px;background:white'></canvas></div>`;
+        const cvs = content.querySelector("#paintCanvas");
+        const ctx = cvs.getContext("2d");
+        function resize() {
+          const r = cvs.getBoundingClientRect();
+          cvs.width = r.width * devicePixelRatio;
+          cvs.height = r.height * devicePixelRatio;
+          ctx.scale(devicePixelRatio, devicePixelRatio);
+          ctx.lineCap = "round";
+        }
+        setTimeout(resize, 50);
+        window.addEventListener("resize", resize);
+        let drawing = false;
+        cvs.addEventListener("pointerdown", (e) => {
+          drawing = true;
+          ctx.beginPath();
+          ctx.moveTo(e.offsetX, e.offsetY);
+        });
+        cvs.addEventListener("pointermove", (e) => {
+          if (!drawing) return;
+          ctx.strokeStyle = content.querySelector("#col").value;
+          ctx.lineWidth = content.querySelector("#size").value;
+          ctx.lineTo(e.offsetX, e.offsetY);
+          ctx.stroke();
+        });
+        cvs.addEventListener("pointerup", () => (drawing = false));
+        content.querySelector("#clear").onclick = () => {
+          ctx.clearRect(0, 0, cvs.width, cvs.height);
+        };
+        content.querySelector("#save").onclick = () => {
+          const link = document.createElement("a");
+          link.download = "drawing.png";
+          link.href = cvs.toDataURL("image/png");
+          link.click();
+        };
+      }
+
+      // File Manager (virtual FS)
+      function app_fileManager() {
+        const win = createWindow("File Manager", {
+          w: 720,
+          h: 480,
+          x: 200,
+          y: 140,
+          appId: "fileman",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;height:100%'><div style='width:260px;padding:8px;border-right:1px solid rgba(255,255,255,0.02)'><button id='newFolder'>New Folder</button><div id='fsList' style='margin-top:8px'></div></div><div style='flex:1;padding:8px'><div id='viewer'>Select item to view</div></div></div>`;
+        const listEl = content.querySelector("#fsList");
+        const viewer = content.querySelector("#viewer");
+        const key = "webos_vfs";
+        function read() {
+          try {
+            return JSON.parse(localStorage.getItem(key) || "{}");
+          } catch (e) {
+            return { files: {}, folders: {} };
+          }
+        }
+        function write(v) {
+          localStorage.setItem(key, JSON.stringify(v));
+        }
+        function refresh() {
+          const s = read();
+          listEl.innerHTML = "";
+          Object.keys(s).forEach((k) => {
+            const div = document.createElement("div");
+            div.className = "file";
+            div.textContent = k;
+            div.onclick = () => {
+              viewer.innerHTML = `<div style="font-weight:700">${k}</div><div style='margin-top:8px'><pre>${escapeHtml(
+                JSON.stringify(s[k], null, 2)
+              )}</pre></div><div style='margin-top:8px'><button id='del'>Delete</button></div>`;
+              viewer.querySelector("#del").onclick = () => {
+                delete s[k];
+                write(s);
+                refresh();
+                viewer.innerHTML = "Deleted";
+              };
+            };
+            listEl.appendChild(div);
+          });
+        }
+        // initialize
+        if (!localStorage.getItem(key))
+          write({
+            "example.txt": "This is an example file. Edit using Text Editor.",
+          });
+        refresh();
+        content.querySelector("#newFolder").onclick = () => {
+          const n = prompt("Name folder/file");
+          if (!n) return;
+          const s = read();
+          s[n] = { created: new Date().toISOString() };
+          write(s);
+          refresh();
+          showNotif("Created " + n);
+        };
+      }
+
+      // Video Editor (simple trimmer + GIF maker)
+      function app_videoEditor() {
+        const win = createWindow("Video Editor", {
+          w: 900,
+          h: 560,
+          x: 180,
+          y: 120,
+          appId: "video",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;flex-direction:column;height:100%'><div style='display:flex;gap:8px;align-items:center;margin-bottom:8px'><input type='file' id='vidfile' accept='video/*' /><button id='trim'>Capture Frame</button><button id='exportGif'>Export GIF (frames)</button></div><video id='video' controls style='width:100%;max-height:320px;background:black;border-radius:6px'></video><div id='frames' style='display:flex;gap:8px;margin-top:8px;overflow:auto'></div></div>`;
+        const file = content.querySelector("#vidfile");
+        const video = content.querySelector("#video");
+        const frames = content.querySelector("#frames");
+        file.onchange = () => {
+          const f = file.files[0];
+          if (!f) return;
+          video.src = URL.createObjectURL(f);
+          showNotif("Video loaded");
+        };
+        content.querySelector("#trim").onclick = () => {
+          const t = video.currentTime;
+          const c = document.createElement("canvas");
+          c.width = 320;
+          c.height = 180;
+          const cx = c.getContext("2d");
+          cx.drawImage(video, 0, 0, c.width, c.height);
+          const img = document.createElement("img");
+          img.src = c.toDataURL("image/png");
+          img.style.width = "160px";
+          img.style.cursor = "pointer";
+          frames.appendChild(img);
+          showNotif("Captured @ " + t.toFixed(2) + "s");
+        };
+        content.querySelector("#exportGif").onclick = () => {
+          // very naive GIF via animated PNG sequence download as zip not implemented. Instead export as sprite strip
+          if (!frames.children.length) return alert("No frames");
+          const canvas = document.createElement("canvas");
+          canvas.width = frames.children.length * 160;
+          canvas.height = 120;
+          const ctx = canvas.getContext("2d");
+          Array.from(frames.children).forEach((img, i) => {
+            ctx.drawImage(img, i * 160, 0, 160, 120);
+          });
+          const a = document.createElement("a");
+          a.download = "frames_strip.png";
+          a.href = canvas.toDataURL();
+          a.click();
+          showNotif("Exported strip");
+        };
+      }
+
+      // Game (snake) with keyboard and touch controls
+      function app_game() {
+        const win = createWindow("Arcade — Snake", {
+          w: 520,
+          h: 520,
+          x: 320,
+          y: 160,
+          appId: "game",
+        });
+        const content = win.content;
+        content.innerHTML = `<div style='display:flex;flex-direction:column;height:100%'><canvas id='g' style='border-radius:6px;background:#03141a'></canvas><div style='display:flex;gap:8px;margin-top:8px'><button id='start'>Start</button><div id='score' style='margin-left:auto;color:var(--muted)'>Score:0</div></div></div>`;
+        const cvs = content.querySelector("#g");
+        const ctx = cvs.getContext("2d");
+        let s = 20;
+        function resize() {
+          cvs.width = Math.floor(cvs.clientWidth);
+          cvs.height = Math.floor(cvs.clientHeight);
+        }
+        setTimeout(resize, 50);
+        window.addEventListener("resize", resize);
+        let snake, dir, food, alive, score;
+        function newGame() {
+          snake = [{ x: 5, y: 5 }];
+          dir = { x: 1, y: 0 };
+          food = randomCell();
+          alive = true;
+          score = 0;
+          content.querySelector("#score").textContent = "Score:0";
+        }
+        function randomCell() {
+          return {
+            x: Math.floor(Math.random() * Math.floor(cvs.width / s)),
+            y: Math.floor(Math.random() * Math.floor(cvs.height / s)),
+          };
+        }
+        function loop() {
+          if (!alive) return; // move
+          const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+          if (
+            head.x < 0 ||
+            head.y < 0 ||
+            head.x >= Math.floor(cvs.width / s) ||
+            head.y >= Math.floor(cvs.height / s)
+          ) {
+            alive = false;
+            showNotif("Game Over");
+            return;
+          }
+          snake.unshift(head);
+          if (head.x === food.x && head.y === food.y) {
+            score++;
+            content.querySelector("#score").textContent = "Score:" + score;
+            food = randomCell();
+          } else {
+            snake.pop();
+          }
+          // draw
+          ctx.clearRect(0, 0, cvs.width, cvs.height);
+          ctx.fillStyle = "#063";
+          snake.forEach((p, i) => {
+            ctx.fillStyle = i === 0 ? "#9be6a0" : "#2ee6a0";
+            ctx.fillRect(p.x * s, p.y * s, s - 1, s - 1);
+          });
+          ctx.fillStyle = "#e6b000";
+          ctx.fillRect(food.x * s, food.y * s, s - 1, s - 1);
+        }
+        content.querySelector("#start").onclick = () => {
+          newGame();
+          const int = setInterval(() => {
+            if (!alive) {
+              clearInterval(int);
+            } else loop();
+          }, 120);
+        };
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowUp") dir = { x: 0, y: -1 };
+          if (e.key === "ArrowDown") dir = { x: 0, y: 1 };
+          if (e.key === "ArrowLeft") dir = { x: -1, y: 0 };
+          if (e.key === "ArrowRight") dir = { x: 1, y: 0 };
+        });
+        newGame();
+      }
+
+      // About
+      function app_about() {
+        const win = createWindow("About WebOS", {
+          w: 520,
+          h: 360,
+          x: 380,
+          y: 180,
+          appId: "about",
+        });
+        win.content.innerHTML = `<div style='padding:12px;color:var(--muted)'>This is a single-file demonstrative WebOS — features: Text editor, Code editor (JS + Python via Skulpt), Terminal, Paint, File manager (localStorage), Video frame capture, Arcade game.\n\nTip: Many features use your browser's storage and runtime. For best experience, allow local files & keep browser console open for logs.</div>`;
+      }
+
+      // Router
+      function openApp(id) {
+        if (id === "editor") app_textEditor();
+        if (id === "code") app_codeEditor();
+        if (id === "terminal") app_terminal();
+        if (id === "paint") app_paint();
+        if (id === "fileman") app_fileManager();
+        if (id === "video") app_videoEditor();
+        if (id === "game") app_game();
+        if (id === "about") app_about();
+      }
+
+      // initial shortcuts
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.key === "e") openApp("editor");
+        if (e.ctrlKey && e.key === "b") openApp("code");
+        if (e.ctrlKey && e.key === "t") openApp("terminal");
+      });
+
+      // start with welcome notif
+      showNotif(
+        "Welcome to WebOS — press ☰ for start menu or Ctrl+E for editor"
+      );
+    </script>
+  </body>
+</html>

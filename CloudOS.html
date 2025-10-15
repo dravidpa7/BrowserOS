@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudOS - Web Operating System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sk ull/1.2.0/skulpt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/1.2.0/skulpt-stdlib.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+        }
+
+        #desktop {
+            height: calc(100vh - 48px);
+            position: relative;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23667eea"/><stop offset="100%" style="stop-color:%23764ba2"/></linearGradient></defs><rect fill="url(%23g)" width="1920" height="1080"/><circle cx="200" cy="200" r="100" fill="rgba(255,255,255,0.05)"/><circle cx="1600" cy="800" r="150" fill="rgba(255,255,255,0.03)"/><circle cx="800" cy="400" r="80" fill="rgba(255,255,255,0.04)"/></svg>');
+            background-size: cover;
+        }
+
+        .window {
+            position: absolute;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            min-width: 400px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .window.maximized {
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: calc(100vh - 48px) !important;
+            border-radius: 0;
+        }
+
+        .title-bar {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+            padding: 12px 16px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 12px 12px 0 0;
+            user-select: none;
+        }
+
+        .window.maximized .title-bar {
+            border-radius: 0;
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .title-bar-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .title-bar-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .title-bar-button:hover {
+            transform: scale(1.2);
+        }
+
+        .close { background: #ff5f56; }
+        .minimize { background: #ffbd2e; }
+        .maximize { background: #27c93f; }
+
+        .window-content {
+            flex: 1;
+            overflow: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .window.maximized .window-content {
+            border-radius: 0;
+        }
+
+        .taskbar {
+            height: 48px;
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s;
+        }
+
+        .start-button:hover {
+            transform: scale(1.05);
+        }
+
+        .taskbar-app {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .taskbar-app:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .taskbar-app.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .taskbar-right {
+            margin-left: auto;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            color: white;
+        }
+
+        .desktop-icon {
+            width: 80px;
+            text-align: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            position: absolute;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .desktop-icon-image {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 8px;
+            font-size: 48px;
+        }
+
+        .desktop-icon-label {
+            color: white;
+            font-size: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .start-menu {
+            position: absolute;
+            bottom: 60px;
+            left: 16px;
+            width: 400px;
+            max-height: 600px;
+            background: rgba(30, 30, 30, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            display: none;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .start-menu.active {
+            display: flex;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .start-menu-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px 12px 0 0;
+            color: white;
+        }
+
+        .start-menu-apps {
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .start-menu-app {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .start-menu-app:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .start-menu-app-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .start-menu-app-name {
+            color: white;
+            font-size: 12px;
+        }
+
+        .text-editor-toolbar {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .toolbar-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .toolbar-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .text-editor-content {
+            flex: 1;
+            padding: 16px;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            resize: none;
+            height: 100%;
+        }
+
+        .terminal {
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-output {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+        }
+
+        .terminal-input-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-prompt {
+            color: #4CAF50;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            font-family: 'Courier New', monospace;
+        }
+
+        .file-manager {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .file-manager-toolbar {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .file-manager-path {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .file-manager-content {
+            flex: 1;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 16px;
+            overflow-y: auto;
+            align-content: start;
+        }
+
+        .file-item {
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .file-icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .file-name {
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .paint-canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .paint-toolbar {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .paint-canvas {
+            background: white;
+            cursor: crosshair;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+        }
+
+        .game-canvas {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+
+        .game-score {
+            margin-top: 16px;
+            font-size: 24px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .video-editor {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .video-preview {
+            flex: 1;
+            background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .video-timeline {
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+        }
+
+        .video-controls {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .CodeMirror {
+            height: 100%;
+            font-size: 14px;
+        }
+
+        .calculator {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 350px;
+            margin: 0 auto;
+        }
+
+        .calc-display {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: right;
+            font-size: 32px;
+            font-family: 'Courier New', monospace;
+            color: white;
+            min-height: 60px;
+            word-break: break-all;
+        }
+
+        .calc-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .calc-button {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .calc-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .calc-button.operator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .calc-button.equals {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .music-player {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .music-artwork {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+        }
+
+        .music-info {
+            text-align: center;
+        }
+
+        .music-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .music-artist {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .music-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .music-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .music-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .music-btn.play {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
+        }
+
+        .context-menu {
+            position: absolute;
+            background: rgba(30, 30, 30, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+            z-index: 10000;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            cursor: nwse-resize;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            animation: slideIn 0.3s ease;
+            z-index: 10001;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+            animation: fadeOut 1s ease 2s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+
+        .loading-logo {
+            font-size: 72px;
+            margin-bottom: 20px;
+            animation: pulse 2s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .loading-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            background: white;
+            width: 0;
+            animation: loadBar 2s ease forwards;
+        }
+
+        @keyframes loadBar {
+            to { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen">
+        <div class="loading-logo">☁️</div>
+        <div class="loading-text">CloudOS</div>
+        <div class="loading-bar">
+            <div class="loading-bar-fill"></div>
+        </div>
+    </div>
+
+    <div id="desktop">
+        <div class="desktop-icon" style="top: 20px; left: 20px;" data-app="textEditor">
+            <div class="desktop-icon-image">📝</div>
+            <div class="desktop-icon-label">Text Editor</div>
+        </div>
+        <div class="desktop-icon" style="top: 20px; left: 120px;" data-app="terminal">
+            <div class="desktop-icon-image">💻</div>
+            <div class="desktop-icon-label">Terminal</div>
+        </div>
+        <div class="desktop-icon" style="top: 20px; left: 220px;" data-app="codeEditor">
+            <div class="desktop-icon-image">👨‍💻</div>
+            <div class="desktop-icon-label">Code Editor</div>
+        </div>
+        <div class="desktop-icon" style="top: 120px; left: 20px;" data-app="fileManager">
+            <div class="desktop-icon-image">📁</div>
+            <div class="desktop-icon-label">Files</div>
+        </div>
+        <div class="desktop-icon" style="top: 120px; left: 120px;" data-app="paint">
+            <div class="desktop-icon-image">🎨</div>
+            <div class="desktop-icon-label">Paint</div>
+        </div>
+        <div class="desktop-icon" style="top: 120px; left: 220px;" data-app="game">
+            <div class="desktop-icon-image">🎮</div>
+            <div class="desktop-icon-label">Snake Game</div>
+        </div>
+    </div>
+
+    <div class="taskbar">
+        <button class="start-button">
+            <span>☁️</span>
+            <span>Start</span>
+        </button>
+        <div id="taskbarApps"></div>
+        <div class="taskbar-right">
+            <span id="clockWidget">12:00 PM</span>
+        </div>
+    </div>
+
+    <div class="start-menu">
+        <div class="start-menu-header">
+            <h2>CloudOS</h2>
+            <p style="opacity: 0.8; font-size: 14px;">All Applications</p>
+        </div>
+        <div class="start-menu-apps">
+            <div class="start-menu-app" data-app="textEditor">
+                <div class="start-menu-app-icon">📝</div>
+                <div class="start-menu-app-name">Text Editor</div>
+            </div>
+            <div class="start-menu-app" data-app="terminal">
+                <div class="start-menu-app-icon">💻</div>
+                <div class="start-menu-app-name">Terminal</div>
+            </div>
+            <div class="start-menu-app" data-app="codeEditor">
+                <div class="start-menu-app-icon">👨‍💻</div>
+                <div class="start-menu-app-name">Code Editor</div>
+            </div>
+            <div class="start-menu-app" data-app="fileManager">
+                <div class="start-menu-app-icon">📁</div>
+                <div class="start-menu-app-name">File Manager</div>
+            </div>
+            <div class="start-menu-app" data-app="paint">
+                <div class="start-menu-app-icon">🎨</div>
+                <div class="start-menu-app-name">Paint</div>
+            </div>
+            <div class="start-menu-app" data-app="videoEditor">
+                <div class="start-menu-app-icon">🎬</div>
+                <div class="start-menu-app-name">Video Editor</div>
+            </div>
+            <div class="start-menu-app" data-app="calculator">
+                <div class="start-menu-app-icon">🔢</div>
+                <div class="start-menu-app-name">Calculator</div>
+            </div>
+            <div class="start-menu-app" data-app="musicPlayer">
+                <div class="start-menu-app-icon">🎵</div>
+                <div class="start-menu-app-name">Music</div>
+            </div>
+            <div class="start-menu-app" data-app="game">
+                <div class="start-menu-app-icon">🎮</div>
+                <div class="start-menu-app-name">Snake Game</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CloudOS {
+            constructor() {
+                this.windows = [];
+                this.zIndex = 100;
+                this.fileSystem = this.initFileSystem();
+                this.init();
+            }
+
+            initFileSystem() {
+                return {
+                    '/': {
+                        'Documents': {
+                            'readme.txt': { type: 'file', content: 'Welcome to CloudOS!\n\nThis is a fully functional web-based operating system.' },
+                            'notes.txt': { type: 'file', content: '' }
+                        },
+                        'Pictures': {},
+                        'Videos': {},
+                        'Downloads': {
+                            'example.py': { type: 'file', content: 'print("Hello from Python!")' }
+                        }
+                    }
+                };
+            }
+
+            init() {
+                this.setupStartMenu();
+                this.setupDesktopIcons();
+                this.setupClock();
+                this.setupContextMenu();
+                this.updateTaskbar();
+            }
+
+            setupStartMenu() {
+                const startBtn = document.querySelector('.start-button');
+                const startMenu = document.querySelector('.start-menu');
+                
+                startBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    startMenu.classList.toggle('active');
+                });
+
+                document.addEventListener('click', () => {
+                    startMenu.classList.remove('active');
+                });
+
+                startMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+                document.querySelectorAll('.start-menu-app').forEach(app => {
+                    app.addEventListener('click', () => {
+                        const appName = app.dataset.app;
+                        this.openApp(appName);
+                        startMenu.classList.remove('active');
+                    });
+                });
+            }
+
+            setupDesktopIcons() {
+                document.querySelectorAll('.desktop-icon').forEach(icon => {
+                    icon.addEventListener('dblclick', () => {
+                        const appName = icon.dataset.app;
+                        this.openApp(appName);
+                    });
+                });
+            }
+
+            setupClock() {
+                const updateClock = () => {
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true 
+                    });
+                    document.getElementById('clockWidget').textContent = timeStr;
+                };
+                updateClock();
+                setInterval(updateClock, 1000);
+            }
+
+            setupContextMenu() {
+                document.getElementById('desktop').addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.showContextMenu(e.pageX, e.pageY);
+                });
+            }
+
+            showContextMenu(x, y) {
+                const existingMenu = document.querySelector('.context-menu');
+                if (existingMenu) existingMenu.remove();
+
+                const menu = document.createElement('div');
+                menu.className = 'context-menu';
+                menu.style.left = x + 'px';
+                menu.style.top = y + 'px';
+                menu.innerHTML = `
+                    <div class="context-menu-item" data-action="refresh">🔄 Refresh</div>
+                    <div class="context-menu-item" data-action="newFolder">📁 New Folder</div>
+                    <div class="context-menu-item" data-action="settings">⚙️ Settings</div>
+                `;
+                document.body.appendChild(menu);
+
+                menu.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    if (action === 'refresh') location.reload();
+                    if (action === 'newFolder') this.showNotification('Feature coming soon!');
+                    if (action === 'settings') this.openApp('settings');
+                    menu.remove();
+                });
+
+                setTimeout(() => {
+                    document.addEventListener('click', () => menu.remove(), { once: true });
+                }, 10);
+            }
+
+            showNotification(message) {
+                const notif = document.createElement('div');
+                notif.className = 'notification';
+                notif.textContent = message;
+                document.body.appendChild(notif);
+                setTimeout(() => notif.remove(), 3000);
+            }
+
+            openApp(appName) {
+                const apps = {
+                    textEditor: () => this.createTextEditor(),
+                    terminal: () => this.createTerminal(),
+                    codeEditor: () => this.createCodeEditor(),
+                    fileManager: () => this.createFileManager(),
+                    paint: () => this.createPaint(),
+                    videoEditor: () => this.createVideoEditor(),
+                    calculator: () => this.createCalculator(),
+                    musicPlayer: () => this.createMusicPlayer(),
+                    game: () => this.createGame()
+                };
+
+                if (apps[appName]) {
+                    apps[appName]();
+                    this.updateTaskbar();
+                }
+            }
+
+            createWindow(title, icon, content, width = 800, height = 600) {
+                const win = document.createElement('div');
+                win.className = 'window';
+                win.style.width = width + 'px';
+                win.style.height = height + 'px';
+                win.style.left = (window.innerWidth / 2 - width / 2 + Math.random() * 40 - 20) + 'px';
+                win.style.top = (window.innerHeight / 2 - height / 2 + Math.random() * 40 - 20) + 'px';
+                win.style.zIndex = ++this.zIndex;
+
+                const windowId = 'win_' + Date.now();
+                win.id = windowId;
+
+                win.innerHTML = `
+                    <div class="title-bar">
+                        <div class="title-bar-left">
+                            <span>${icon}</span>
+                            <span>${title}</span>
+                        </div>
+                        <div class="title-bar-buttons">
+                            <div class="title-bar-button minimize"></div>
+                            <div class="title-bar-button maximize"></div>
+                            <div class="title-bar-button close"></div>
+                        </div>
+                    </div>
+                    <div class="window-content">${content}</div>
+                    <div class="resize-handle"></div>
+                `;
+
+                document.getElementById('desktop').appendChild(win);
+
+                this.windows.push({ id: windowId, title, icon, element: win });
+                this.setupWindowControls(win);
+                this.makeDraggable(win);
+                this.makeResizable(win);
+
+                return win;
+            }
+
+            setupWindowControls(win) {
+                const closeBtn = win.querySelector('.close');
+                const minimizeBtn = win.querySelector('.minimize');
+                const maximizeBtn = win.querySelector('.maximize');
+
+                closeBtn.addEventListener('click', () => {
+                    win.style.animation = 'slideUp 0.3s ease reverse';
+                    setTimeout(() => {
+                        win.remove();
+                        this.windows = this.windows.filter(w => w.id !== win.id);
+                        this.updateTaskbar();
+                    }, 300);
+                });
+
+                minimizeBtn.addEventListener('click', () => {
+                    win.style.display = 'none';
+                    this.updateTaskbar();
+                });
+
+                maximizeBtn.addEventListener('click', () => {
+                    win.classList.toggle('maximized');
+                });
+
+                win.addEventListener('mousedown', () => {
+                    win.style.zIndex = ++this.zIndex;
+                });
+            }
+
+            makeDraggable(win) {
+                const titleBar = win.querySelector('.title-bar');
+                let isDragging = false;
+                let currentX, currentY, initialX, initialY;
+
+                titleBar.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('title-bar-button')) return;
+                    if (win.classList.contains('maximized')) return;
+                    
+                    isDragging = true;
+                    initialX = e.clientX - win.offsetLeft;
+                    initialY = e.clientY - win.offsetTop;
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+
+                    win.style.left = currentX + 'px';
+                    win.style.top = Math.max(0, currentY) + 'px';
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            }
+
+            makeResizable(win) {
+                const handle = win.querySelector('.resize-handle');
+                let isResizing = false;
+                let startX, startY, startWidth, startHeight;
+
+                handle.addEventListener('mousedown', (e) => {
+                    if (win.classList.contains('maximized')) return;
+                    
+                    isResizing = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startWidth = parseInt(win.style.width);
+                    startHeight = parseInt(win.style.height);
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    
+                    const width = startWidth + (e.clientX - startX);
+                    const height = startHeight + (e.clientY - startY);
+                    
+                    win.style.width = Math.max(400, width) + 'px';
+                    win.style.height = Math.max(300, height) + 'px';
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isResizing = false;
+                });
+            }
+
+            updateTaskbar() {
+                const taskbarApps = document.getElementById('taskbarApps');
+                taskbarApps.innerHTML = '';
+
+                this.windows.forEach(w => {
+                    const app = document.createElement('div');
+                    app.className = 'taskbar-app';
+                    if (w.element.style.display !== 'none') {
+                        app.classList.add('active');
+                    }
+                    app.innerHTML = `${w.icon} ${w.title}`;
+                    app.addEventListener('click', () => {
+                        if (w.element.style.display === 'none') {
+                            w.element.style.display = 'flex';
+                        }
+                        w.element.style.zIndex = ++this.zIndex;
+                    });
+                    taskbarApps.appendChild(app);
+                });
+            }
+
+            createTextEditor() {
+                const content = `
+                    <div class="text-editor-toolbar">
+                        <button class="toolbar-button" onclick="cloudOS.textEditorNew()">📄 New</button>
+                        <button class="toolbar-button" onclick="cloudOS.textEditorSave()">💾 Save</button>
+                        <button class="toolbar-button" onclick="document.execCommand('bold')">B</button>
+                        <button class="toolbar-button" onclick="document.execCommand('italic')">I</button>
+                        <button class="toolbar-button" onclick="document.execCommand('underline')">U</button>
+                    </div>
+                    <div class="text-editor-content">
+                        <div contenteditable="true" style="outline: none; height: 100%; color: white;" id="textEditorContent">
+                            Start typing here...
+                        </div>
+                    </div>
+                `;
+                this.createWindow('Text Editor', '📝', content);
+            }
+
+            textEditorNew() {
+                document.getElementById('textEditorContent').innerHTML = '';
+                this.showNotification('New document created');
+            }
+
+            textEditorSave() {
+                const content = document.getElementById('textEditorContent').innerText;
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'document.txt';
+                a.click();
+                this.showNotification('Document saved!');
+            }
+
+            createTerminal() {
+                const content = `
+                    <div class="terminal">
+                        <div class="terminal-output" id="terminalOutput">CloudOS Terminal v1.0
+Type 'help' for available commands
+
+</div>
+                        <div class="terminal-input-line">
+                            <span class="terminal-prompt">$</span>
+                            <input type="text" class="terminal-input" id="terminalInput" autocomplete="off">
+                        </div>
+                    </div>
+                `;
+                const win = this.createWindow('Terminal', '💻', content);
+
+                setTimeout(() => {
+                    const input = win.querySelector('#terminalInput');
+                    const output = win.querySelector('#terminalOutput');
+                    
+                    input.focus();
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            const cmd = input.value.trim();
+                            output.textContent += `$ ${cmd}\n`;
+                            this.executeCommand(cmd, output);
+                            input.value = '';
+                            output.scrollTop = output.scrollHeight;
+                        }
+                    });
+                }, 100);
+            }
+
+            executeCommand(cmd, output) {
+                const parts = cmd.split(' ');
+                const command = parts[0];
+                const args = parts.slice(1);
+
+                const commands = {
+                    help: () => 'Available commands: help, clear, echo, date, calc, python, ls, pwd, whoami',
+                    clear: () => { output.textContent = ''; return ''; },
+                    echo: () => args.join(' '),
+                    date: () => new Date().toString(),
+                    calc: () => {
+                        try {
+                            return eval(args.join(' '));
+                        } catch (e) {
+                            return 'Error: Invalid expression';
+                        }
+                    },
+                    python: () => {
+                        const code = args.join(' ');
+                        return this.runPython(code, output);
+                    },
+                    ls: () => '📁 Documents  📁 Pictures  📁 Videos  📁 Downloads',
+                    pwd: () => '/home/user',
+                    whoami: () => 'cloudos-user'
+                };
+
+                const result = commands[command] ? commands[command]() : `Command not found: ${command}`;
+                if (result) output.textContent += result + '\n\n';
+            }
+
+            runPython(code, output) {
+                let result = '';
+                Sk.configure({
+                    output: (text) => { result += text; },
+                    read: (x) => {
+                        if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+                            throw "File not found: '" + x + "'";
+                        return Sk.builtinFiles["files"][x];
+                    }
+                });
+
+                try {
+                    Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+                    setTimeout(() => {
+                        output.textContent += result;
+                    }, 100);
+                    return '';
+                } catch (e) {
+                    return 'Python Error: ' + e.toString();
+                }
+            }
+
+            createCodeEditor() {
+                const content = `
+                    <div class="text-editor-toolbar">
+                        <button class="toolbar-button" onclick="cloudOS.codeEditorRun()">▶️ Run</button>
+                        <button class="toolbar-button" onclick="cloudOS.codeEditorSave()">💾 Save</button>
+                        <select class="toolbar-button" id="codeLanguage">
+                            <option value="javascript">JavaScript</option>
+                            <option value="python">Python</option>
+                            <option value="htmlmixed">HTML</option>
+                        </select>
+                    </div>
+                    <div id="codeEditorContainer" style="height: calc(100% - 50px);"></div>
+                `;
+                const win = this.createWindow('Code Editor', '👨‍💻', content, 900, 700);
+
+                setTimeout(() => {
+                    const editor = CodeMirror(win.querySelector('#codeEditorContainer'), {
+                        value: '// Write your code here\nconst msg = "Hello from CloudOS!";\nconsole.log(msg);',
+                        mode: 'javascript',
+                        theme: 'monokai',
+                        lineNumbers: true,
+                        autoCloseBrackets: true,
+                        matchBrackets: true
+                    });
+
+                    win.codeEditor = editor;
+
+                    win.querySelector('#codeLanguage').addEventListener('change', (e) => {
+                        editor.setOption('mode', e.target.value);
+                    });
+                }, 100);
+            }
+
+            codeEditorRun() {
+                const activeWin = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Code Editor'
+                );
+                
+                if (activeWin && activeWin.codeEditor) {
+                    const code = activeWin.codeEditor.getValue();
+                    const lang = document.getElementById('codeLanguage').value;
+
+                    if (lang === 'javascript') {
+                        try {
+                            eval(code);
+                            this.showNotification('Code executed! Check console.');
+                        } catch (e) {
+                            this.showNotification('Error: ' + e.message);
+                        }
+                    } else if (lang === 'python') {
+                        this.runPythonCode(code);
+                    } else {
+                        this.showNotification('HTML preview coming soon!');
+                    }
+                }
+            }
+
+            runPythonCode(code) {
+                let output = '';
+                Sk.configure({
+                    output: (text) => { output += text; }
+                });
+
+                Sk.misceval.asyncToPromise(() => {
+                    return Sk.importMainWithBody("<stdin>", false, code, true);
+                }).then(() => {
+                    this.showNotification('Python output: ' + (output || 'No output'));
+                }).catch((e) => {
+                    this.showNotification('Python Error: ' + e.toString());
+                });
+            }
+
+            codeEditorSave() {
+                const activeWin = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Code Editor'
+                );
+                
+                if (activeWin && activeWin.codeEditor) {
+                    const code = activeWin.codeEditor.getValue();
+                    const blob = new Blob([code], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'code.txt';
+                    a.click();
+                    this.showNotification('Code saved!');
+                }
+            }
+
+            createFileManager() {
+                const content = `
+                    <div class="file-manager">
+                        <div class="file-manager-toolbar">
+                            <button class="toolbar-button" onclick="cloudOS.fileManagerBack()">◀️ Back</button>
+                            <button class="toolbar-button" onclick="cloudOS.fileManagerUp()">🔼 Up</button>
+                            <input type="text" class="file-manager-path" id="currentPath" value="/" readonly>
+                            <button class="toolbar-button" onclick="cloudOS.fileManagerNew()">📄 New</button>
+                        </div>
+                        <div class="file-manager-content" id="fileManagerContent"></div>
+                    </div>
+                `;
+                const win = this.createWindow('File Manager', '📁', content);
+                win.currentPath = '/';
+                this.updateFileManager(win);
+            }
+
+            updateFileManager(win) {
+                const content = win.querySelector('#fileManagerContent');
+                const pathInput = win.querySelector('#currentPath');
+                const path = win.currentPath || '/';
+                pathInput.value = path;
+
+                const items = this.getDirectoryContents(path);
+                content.innerHTML = '';
+
+                items.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    const icon = item.type === 'dir' ? '📁' : '📄';
+                    div.innerHTML = `
+                        <div class="file-icon">${icon}</div>
+                        <div class="file-name">${item.name}</div>
+                    `;
+                    div.addEventListener('dblclick', () => {
+                        if (item.type === 'dir') {
+                            win.currentPath = path + item.name + '/';
+                            this.updateFileManager(win);
+                        } else {
+                            this.openFile(path + item.name);
+                        }
+                    });
+                    content.appendChild(div);
+                });
+            }
+
+            getDirectoryContents(path) {
+                const parts = path.split('/').filter(p => p);
+                let current = this.fileSystem['/'];
+
+                for (const part of parts) {
+                    if (current[part]) current = current[part];
+                }
+
+                const items = [];
+                for (const [name, item] of Object.entries(current)) {
+                    items.push({
+                        name,
+                        type: item.type === 'file' ? 'file' : 'dir'
+                    });
+                }
+                return items;
+            }
+
+            fileManagerBack() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'File Manager'
+                );
+                if (win && win.currentPath !== '/') {
+                    const parts = win.currentPath.split('/').filter(p => p);
+                    parts.pop();
+                    win.currentPath = '/' + parts.join('/') + (parts.length ? '/' : '');
+                    this.updateFileManager(win);
+                }
+            }
+
+            fileManagerUp() {
+                this.fileManagerBack();
+            }
+
+            fileManagerNew() {
+                this.showNotification('New file created: untitled.txt');
+            }
+
+            openFile(path) {
+                this.showNotification('Opening: ' + path);
+                this.createTextEditor();
+            }
+
+            createPaint() {
+                const content = `
+                    <div class="paint-canvas-container">
+                        <div class="paint-toolbar">
+                            <input type="color" class="color-picker" id="paintColor" value="#ffffff">
+                            <button class="toolbar-button" onclick="cloudOS.setPaintTool('brush')">🖌️ Brush</button>
+                            <button class="toolbar-button" onclick="cloudOS.setPaintTool('eraser')">🧹 Eraser</button>
+                            <button class="toolbar-button" onclick="cloudOS.clearCanvas()">🗑️ Clear</button>
+                            <button class="toolbar-button" onclick="cloudOS.savePainting()">💾 Save</button>
+                            <input type="range" min="1" max="20" value="5" id="brushSize">
+                        </div>
+                        <canvas class="paint-canvas" id="paintCanvas" width="800" height="550"></canvas>
+                    </div>
+                `;
+                const win = this.createWindow('Paint', '🎨', content, 850, 650);
+
+                setTimeout(() => {
+                    const canvas = win.querySelector('#paintCanvas');
+                    const ctx = canvas.getContext('2d');
+                    let painting = false;
+                    let tool = 'brush';
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    canvas.addEventListener('mousedown', (e) => {
+                        painting = true;
+                        draw(e);
+                    });
+
+                    canvas.addEventListener('mouseup', () => painting = false);
+                    canvas.addEventListener('mousemove', draw);
+
+                    function draw(e) {
+                        if (!painting) return;
+
+                        const rect = canvas.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+
+                        ctx.lineWidth = document.getElementById('brushSize').value;
+                        ctx.lineCap = 'round';
+
+                        if (tool === 'brush') {
+                            ctx.strokeStyle = document.getElementById('paintColor').value;
+                        } else {
+                            ctx.strokeStyle = '#ffffff';
+                        }
+
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                    }
+
+                    win.paintCanvas = canvas;
+                    win.paintTool = tool;
+                }, 100);
+            }
+
+            setPaintTool(tool) {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Paint'
+                );
+                if (win) win.paintTool = tool;
+            }
+
+            clearCanvas() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Paint'
+                );
+                if (win && win.paintCanvas) {
+                    const ctx = win.paintCanvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, win.paintCanvas.width, win.paintCanvas.height);
+                }
+            }
+
+            savePainting() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Paint'
+                );
+                if (win && win.paintCanvas) {
+                    win.paintCanvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'painting.png';
+                        a.click();
+                        this.showNotification('Painting saved!');
+                    });
+                }
+            }
+
+            createGame() {
+                const content = `
+                    <div class="game-container">
+                        <canvas class="game-canvas" id="gameCanvas" width="400" height="400"></canvas>
+                        <div class="game-score">Score: <span id="gameScore">0</span></div>
+                        <div style="margin-top: 12px; color: rgba(255,255,255,0.7);">Use Arrow Keys to move</div>
+                    </div>
+                `;
+                const win = this.createWindow('Snake Game', '🎮', content, 500, 550);
+
+                setTimeout(() => {
+                    const canvas = win.querySelector('#gameCanvas');
+                    const ctx = canvas.getContext('2d');
+                    const scoreEl = win.querySelector('#gameScore');
+
+                    const gridSize = 20;
+                    const tileCount = 20;
+                    let snake = [{x: 10, y: 10}];
+                    let food = {x: 15, y: 15};
+                    let dx = 0, dy = 0;
+                    let score = 0;
+                    let gameRunning = true;
+
+                    document.addEventListener('keydown', (e) => {
+                        if (!gameRunning) return;
+                        switch(e.key) {
+                            case 'ArrowUp': if (dy === 0) { dx = 0; dy = -1; } break;
+                            case 'ArrowDown': if (dy === 0) { dx = 0; dy = 1; } break;
+                            case 'ArrowLeft': if (dx === 0) { dx = -1; dy = 0; } break;
+                            case 'ArrowRight': if (dx === 0) { dx = 1; dy = 0; } break;
+                        }
+                    });
+
+                    function gameLoop() {
+                        if (!gameRunning) return;
+
+                        // Move snake
+                        const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+                        // Check collision with walls
+                        if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                            gameRunning = false;
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillStyle = 'white';
+                            ctx.font = '30px Arial';
+                            ctx.fillText('Game Over!', 120, 200);
+                            return;
+                        }
+
+                        // Check collision with self
+                        if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                            gameRunning = false;
+                            return;
+                        }
+
+                        snake.unshift(head);
+
+                        // Check if food eaten
+                        if (head.x === food.x && head.y === food.y) {
+                            score += 10;
+                            scoreEl.textContent = score;
+                            food = {
+                                x: Math.floor(Math.random() * tileCount),
+                                y: Math.floor(Math.random() * tileCount)
+                            };
+                        } else {
+                            snake.pop();
+                        }
+
+                        // Draw
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        // Draw snake
+                        ctx.fillStyle = '#4CAF50';
+                        snake.forEach((segment, index) => {
+                            ctx.fillStyle = index === 0 ? '#66BB6A' : '#4CAF50';
+                            ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+                        });
+
+                        // Draw food
+                        ctx.fillStyle = '#FF5722';
+                        ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
+
+                        setTimeout(gameLoop, 100);
+                    }
+
+                    gameLoop();
+                }, 100);
+            }
+
+            createVideoEditor() {
+                const content = `
+                    <div class="video-editor">
+                        <div class="video-preview">
+                            <div style="color: white; text-align: center;">
+                                <div style="font-size: 64px; margin-bottom: 20px;">🎬</div>
+                                <h3>Video Editor</h3>
+                                <p style="margin-top: 12px; color: rgba(255,255,255,0.6);">Drag and drop video files here</p>
+                            </div>
+                        </div>
+                        <div class="video-timeline"></div>
+                        <div class="video-controls">
+                            <button class="toolbar-button">⏮️ Start</button>
+                            <button class="toolbar-button">⏯️ Play</button>
+                            <button class="toolbar-button">⏭️ End</button>
+                            <button class="toolbar-button">✂️ Cut</button>
+                            <button class="toolbar-button">📥 Import</button>
+                            <button class="toolbar-button">💾 Export</button>
+                        </div>
+                    </div>
+                `;
+                this.createWindow('Video Editor', '🎬', content, 900, 700);
+            }
+
+            createCalculator() {
+                const content = `
+                    <div class="calculator">
+                        <div class="calc-display" id="calcDisplay">0</div>
+                        <div class="calc-buttons">
+                            <button class="calc-button" onclick="cloudOS.calcClear()">C</button>
+                            <button class="calc-button" onclick="cloudOS.calcBackspace()">⌫</button>
+                            <button class="calc-button operator" onclick="cloudOS.calcAppend('/')">÷</button>
+                            <button class="calc-button operator" onclick="cloudOS.calcAppend('*')">×</button>
+                            
+                            <button class="calc-button" onclick="cloudOS.calcAppend('7')">7</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('8')">8</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('9')">9</button>
+                            <button class="calc-button operator" onclick="cloudOS.calcAppend('-')">−</button>
+                            
+                            <button class="calc-button" onclick="cloudOS.calcAppend('4')">4</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('5')">5</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('6')">6</button>
+                            <button class="calc-button operator" onclick="cloudOS.calcAppend('+')">+</button>
+                            
+                            <button class="calc-button" onclick="cloudOS.calcAppend('1')">1</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('2')">2</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('3')">3</button>
+                            <button class="calc-button equals" onclick="cloudOS.calcEquals()">=</button>
+                            
+                            <button class="calc-button" onclick="cloudOS.calcAppend('0')">0</button>
+                            <button class="calc-button" onclick="cloudOS.calcAppend('.')">.</button>
+                        </div>
+                    </div>
+                `;
+                const win = this.createWindow('Calculator', '🔢', content, 400, 550);
+                win.calcExpression = '0';
+            }
+
+            calcAppend(value) {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Calculator'
+                );
+                if (win) {
+                    if (win.calcExpression === '0' && value !== '.') {
+                        win.calcExpression = value;
+                    } else {
+                        win.calcExpression += value;
+                    }
+                    document.getElementById('calcDisplay').textContent = win.calcExpression;
+                }
+            }
+
+            calcClear() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Calculator'
+                );
+                if (win) {
+                    win.calcExpression = '0';
+                    document.getElementById('calcDisplay').textContent = '0';
+                }
+            }
+
+            calcBackspace() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Calculator'
+                );
+                if (win) {
+                    win.calcExpression = win.calcExpression.slice(0, -1) || '0';
+                    document.getElementById('calcDisplay').textContent = win.calcExpression;
+                }
+            }
+
+            calcEquals() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Calculator'
+                );
+                if (win) {
+                    try {
+                        const result = eval(win.calcExpression);
+                        win.calcExpression = result.toString();
+                        document.getElementById('calcDisplay').textContent = win.calcExpression;
+                    } catch (e) {
+                        document.getElementById('calcDisplay').textContent = 'Error';
+                        win.calcExpression = '0';
+                    }
+                }
+            }
+
+            createMusicPlayer() {
+                const content = `
+                    <div class="music-player">
+                        <div class="music-artwork">🎵</div>
+                        <div class="music-info">
+                            <div class="music-title">Dream Sequence</div>
+                            <div class="music-artist">CloudOS Orchestra</div>
+                        </div>
+                        <div style="width: 100%; max-width: 400px; margin: 0 auto;">
+                            <div style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 8px;">
+                                <span id="currentTime">0:00</span>
+                                <span id="duration">3:45</span>
+                            </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; cursor: pointer;">
+                                <div id="musicProgress" style="width: 0%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 3px; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div class="music-controls">
+                            <button class="music-btn">⏮️</button>
+                            <button class="music-btn play" onclick="cloudOS.toggleMusic()">▶️</button>
+                            <button class="music-btn">⏭️</button>
+                            <button class="music-btn">🔀</button>
+                            <button class="music-btn">🔁</button>
+                        </div>
+                    </div>
+                `;
+                const win = this.createWindow('Music Player', '🎵', content, 450, 500);
+                win.musicPlaying = false;
+                win.musicProgress = 0;
+            }
+
+            toggleMusic() {
+                const win = Array.from(document.querySelectorAll('.window')).find(w => 
+                    w.querySelector('.title-bar-left span:last-child').textContent === 'Music Player'
+                );
+                if (win) {
+                    win.musicPlaying = !win.musicPlaying;
+                    const playBtn = win.querySelector('.music-btn.play');
+                    playBtn.textContent = win.musicPlaying ? '⏸️' : '▶️';
+
+                    if (win.musicPlaying) {
+                        this.startMusicProgress(win);
+                    }
+                }
+            }
+
+            startMusicProgress(win) {
+                if (!win.musicPlaying) return;
+                
+                const progress = win.querySelector('#musicProgress');
+                const currentTime = win.querySelector('#currentTime');
+                
+                win.musicProgress += 0.5;
+                if (win.musicProgress >= 100) {
+                    win.musicProgress = 0;
+                    win.musicPlaying = false;
+                    win.querySelector('.music-btn.play').textContent = '▶️';
+                    return;
+                }
+
+                progress.style.width = win.musicProgress + '%';
+                const seconds = Math.floor((win.musicProgress / 100) * 225);
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                currentTime.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+                setTimeout(() => this.startMusicProgress(win), 300);
+            }
+        }
+
+        // Initialize CloudOS
+        const cloudOS = new CloudOS();
+    </script>
+</body>
+</html>
